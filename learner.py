@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import parl
+import numpy as np
 
 from smac.env import StarCraft2Env
 from env_wrapper import SC2EnvWrapper
@@ -30,39 +32,42 @@ class Learner(object):
     def __init__(self, config):
         self.config = config
         #=== Create Agent ===
-        env = StarCraft2Env(
-            map_name=config['scenario'], difficulty=config['difficulty'])
-        env = SC2EnvWrapper(env)
-        config['episode_limit'] = env.episode_limit
-        config['obs_shape'] = env.obs_shape
-        config['state_shape'] = env.state_shape
-        config['n_agents'] = env.n_agents
-        config['n_actions'] = env.n_actions
-        config = deepcopy(config)
-        # 改成Transformer
-        agent_model = TransformerModel(config['obs_shape'], config['n_actions'],
-                            config['rnn_hidden_dim'])
-        qmixer_model = QMixerModel(
-                    config['n_agents'], config['state_shape'], config['mixing_embed_dim'],
-                    config['hypernet_layers'], config['hypernet_embed_dim'])
-        algorithm = QMIX(agent_model, qmixer_model, config['double_q'],
-                    config['gamma'], config['lr'], config['clip_grad_norm'])
-        qmix_agent = QMixAgent(
-                    algorithm, config['exploration_start'], config['min_exploration'],
-                    config['exploration_decay'], config['update_target_interval'])
+        self.__create_agent()
 
-        #=== Learner ===
+        #=== init Learner params ===
         #self.total_steps = 0
         self.central_steps = 0
         self.learn_steps = 0
         self.target_update_count = 0
         self.rpm = EpisodeReplayBuffer(config['replay_buffer_size'])
 
-        parl.connect(self.config['master_address'])
         #=== Remote Actor ===
-        self.create_actors()
+        parl.connect(self.config['master_address'])
+        self.__create_actors()
 
-    def create_actors(self):
+    def __create_agent(self):
+        # init config from env
+        env = StarCraft2Env(map_name=self.config['scenario'], difficulty=self.config['difficulty'])
+        env = SC2EnvWrapper(env)
+        self.config['episode_limit'] = env.episode_limit
+        self.config['obs_shape'] = env.obs_shape
+        self.config['state_shape'] = env.state_shape
+        self.config['n_agents'] = env.n_agents
+        self.config['n_actions'] = env.n_actions
+        
+        # 从RNN改成Transformer
+        agent_model = TransformerModel(self.config['obs_shape'], self.config['n_actions'],
+                            self.config['rnn_hidden_dim'])
+        qmixer_model = QMixerModel(
+                    self.config['n_agents'], self.config['state_shape'], self.config['mixing_embed_dim'],
+                    self.config['hypernet_layers'], self.config['hypernet_embed_dim'])
+        algorithm = QMIX(agent_model, qmixer_model, self.config['double_q'],
+                    self.config['gamma'], self.config['lr'], self.config['clip_grad_norm'])
+        self.qmix_agent = QMixAgent(
+                    algorithm, self.config['exploration_start'], self.config['min_exploration'],
+                    self.config['exploration_decay'], self.config['update_target_interval'])
+
+    def __create_actors(self):
         self.remote_actors = [
             Actor(self.config) for _ in range(self.config['actor_num'])
         ]
@@ -70,6 +75,47 @@ class Learner(object):
             self.config['actor_num']))
 
     def step(self):
+        self.central_steps += 1
+        # get all data from remote actors.
+        c1 = time.time()
+        sample_data_object_ids = [
+            remote_actor.sample() for remote_actor in self.remote_actors
+        ]
+        sample_datas = [
+            future_object.get() for future_object in sample_data_object_ids
+        ]
+
+        for sample_data in sample_datas:
+            for data in sample_data:
+                #if 'steps' == data:
+                    #for steps in sample_data[data]:
+                        #self.total_steps += steps
+                #elif 'episode_experience' == data:
+                if 'episode_experience' == data:
+                    for episode_experience in sample_data[data]:
+                        self.rpm.add(episode_experience)
+        print("collect data time cost:{}".format( time.time()-c1 ))
+
+        mean_loss = []
+        mean_td_error = []
+        for _ in range(self.config['calc_num']):
+            s_batch, a_batch, r_batch, t_batch, obs_batch, available_actions_batch,\
+                    filled_batch = self.rpm.sample_batch(self.config['batch_size'])
+            # center learn
+            loss, td_error = self.qmix_agent.learn(s_batch, a_batch, r_batch, t_batch,
+                                        obs_batch, available_actions_batch,
+                                        filled_batch)
+            mean_loss.append(loss)
+            mean_td_error.append(td_error)
+
+            # TODO confirm whether UPDeT framework need to update remote network params
+            self.__update_remote_network()
+        
+        mean_loss = np.mean(mean_loss) if mean_loss else None
+        mean_td_error = np.mean(mean_td_error) if mean_td_error else None
+        return mean_loss, mean_td_error
+
+    def __update_remote_network(self):
         pass
 
     def should_stop(self):
