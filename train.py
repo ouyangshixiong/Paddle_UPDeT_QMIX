@@ -12,13 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from smac.env import StarCraft2Env
+from env_wrapper import SC2EnvWrapper
+from components.episode_buffer import ReplayBuffer
+from components.transforms import OneHot
+from config import Config
+
 from learner import Learner
-from config import QMixConfig as config
+from copy import deepcopy
 from parl.utils import summary
 import numpy as np
 
-if __name__ == '__main__':
-    # center learning
+def run_sequential(config):
+    # init config from env
+    env_info = StarCraft2Env(map_name=config['scenario'], difficulty=config['difficulty'])
+    env_info = SC2EnvWrapper(env_info)
+    # Default/Base scheme
+    scheme = {
+        "state": {"vshape": env_info.state_shape},
+        "obs": {"vshape": env_info.obs_shape, "group": "agents"},
+        "actions": {"vshape": (1,), "group": "agents", "dtype": np.longlong},
+        "avail_actions": {"vshape": (env_info.n_actions,), "group": "agents", "dtype": np.int32},
+        "reward": {"vshape": (1,)},
+        "terminated": {"vshape": (1,), "dtype": np.uint8},
+    }
+    groups = {
+        "agents": env_info.n_agents
+    }
+    preprocess = {
+        "actions": ("actions_onehot", [OneHot(out_dim=env_info.n_actions)])
+    }
+
+    buffer = ReplayBuffer(scheme, groups, config['buffer_size'], env_info.episode_limit + 1,
+                          preprocess=preprocess,
+                          device="cpu" if config['buffer_cpu_only'] else config['device'])
+
+    # UPDet mac --> PARL actor ???这里不能耦合到actor
+
+    # learner
     learner = Learner(config)
     while not learner.should_stop():
         loss, td_error = learner.step()
@@ -43,3 +74,37 @@ if __name__ == '__main__':
                             learner.central_steps)
             summary.add_scalar('target_update_count',
                             learner.target_update_count, learner.central_steps)
+
+    while True:
+        
+        s,r = train_episode(env_info)
+
+        if True:
+            #learn
+            pass
+
+        # evaluate
+
+        # save_model
+
+def train_episode(env):
+    # init
+    env.reset()
+
+    while True:
+        # pre-update
+        # select_action --> PARL actor
+        env.step()
+        # post-update
+
+    #last update
+    #last action data update
+    
+
+
+
+
+
+if __name__ == '__main__':
+    config = deepcopy(Config)
+    run_sequential(config)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-QMixConfig = {
+Config = {
     'master_address': 'localhost:8010',
     'actor_num': 2,
     'env_num': 2,
@@ -37,5 +37,7 @@ QMixConfig = {
     'hypernet_layers': 2,
     'hypernet_embed_dim': 64,
     'double_q': True,
-    'difficulty': '7'
+    'difficulty': '7',
+    'buffer_size': '32', # Size of the replay buffer
+    'buffer_cpu_only': True
 }

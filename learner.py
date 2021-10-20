@@ -19,7 +19,7 @@ import numpy as np
 from smac.env import StarCraft2Env
 from env_wrapper import SC2EnvWrapper
 from copy import deepcopy
-from replay_buffer import EpisodeExperience, EpisodeReplayBuffer
+from components.episode_buffer import ReplayBuffer
 
 from transformer_model import TransformerModel
 from qmixer_model import QMixerModel
@@ -39,7 +39,7 @@ class Learner(object):
         self.central_steps = 0
         self.learn_steps = 0
         self.target_update_count = 0
-        self.rpm = EpisodeReplayBuffer(config['replay_buffer_size'])
+        #self.rpm = EpisodeReplayBuffer(config['replay_buffer_size'])
 
         #=== Remote Actor ===
         parl.connect(self.config['master_address'])
