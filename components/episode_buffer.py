@@ -70,9 +70,11 @@ class EpisodeBatch:
                 shape = vshape
 
             if episode_const:
-                self.data.episode_data[field_key] = np.zeros((batch_size, *shape), dtype=dtype, device=self.device)
+                #self.data.episode_data[field_key] = np.zeros((batch_size, *shape), dtype=dtype, device=self.device)
+                self.data.episode_data[field_key] = np.zeros((batch_size, *shape), dtype=dtype)
             else:
-                self.data.transition_data[field_key] = np.zeros((batch_size, max_seq_length, *shape), dtype=dtype, device=self.device)
+                #self.data.transition_data[field_key] = np.zeros((batch_size, max_seq_length, *shape), dtype=dtype, device=self.device)
+                self.data.transition_data[field_key] = np.zeros((batch_size, max_seq_length, *shape), dtype=dtype)
 
     def extend(self, scheme, groups=None):
         self._setup_data(scheme, self.groups if groups is None else groups, self.batch_size, self.max_seq_length)

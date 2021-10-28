@@ -37,7 +37,7 @@ Config = {
     'hypernet_layers': 2,
     'hypernet_embed_dim': 64,
     'double_q': True,
-    'difficulty': '7',
-    'buffer_size': '32', # Size of the replay buffer
+    'difficulty': 7,
+    'buffer_size': 32, # Size of the replay buffer
     'buffer_cpu_only': True
 }
