@@ -18,8 +18,12 @@ import paddle.nn.functional as F
 import parl
 
 class TransformerModel(parl.Model):
-    def __init__(self):
-        pass
+    def __init__(self, obs_shape, n_actions, rnn_hidden_dim):
+        super(TransformerModel, self).__init__()
+        self.obs_shape = obs_shape
+        self.n_actions = n_actions
+        self.rnn_hidden_dim = rnn_hidden_dim
+        
 
     def init_hidden(self):
         pass

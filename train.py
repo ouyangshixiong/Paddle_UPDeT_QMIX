@@ -23,6 +23,8 @@ from copy import deepcopy
 from parl.utils import summary
 import numpy as np
 
+from runner import Runner
+
 def run_sequential(config):
     # init config from env
     env_info = StarCraft2Env(map_name=config['scenario'], difficulty=config['difficulty'])
@@ -49,31 +51,21 @@ def run_sequential(config):
 
     # UPDet mac --> PARL actor ???这里不能耦合到actor
 
-    # learner
-    learner = Learner(config)
-    while not learner.should_stop():
-        loss, td_error = learner.step()
-        summary.add_scalar('train_loss', loss, learner.central_steps)
-        summary.add_scalar('train_td_error:', td_error, learner.central_steps)
+    # runner select action --> send to remote --> data back
+    runner = Runner(config, scheme=scheme, groups=groups, preprocess=preprocess)
+    episode_batch = runner.run()
+    buffer.insert_episode_batch(episode_batch)
 
-        if learner.central_steps % config['test_steps'] == 0:
-            eval_reward_buffer = []
-            eval_steps_buffer = []
-            eval_is_win_buffer = []
-            for _ in range(3):
-                eval_reward, eval_step, eval_is_win = learner.run_evaluate_episode()
-                eval_reward_buffer.append(eval_reward)
-                eval_steps_buffer.append(eval_step)
-                eval_is_win_buffer.append(eval_is_win)
-            summary.add_scalar('eval_reward', np.mean(eval_reward_buffer),
-                            learner.central_steps)
-            summary.add_scalar('eval_steps', np.mean(eval_steps_buffer),
-                            learner.central_steps)
-            mean_win_rate = np.mean(eval_is_win_buffer)
-            summary.add_scalar('eval_win_rate', mean_win_rate,
-                            learner.central_steps)
-            summary.add_scalar('target_update_count',
-                            learner.target_update_count, learner.central_steps)
+
+    if buffer.can_sample(config['batch_size']):
+        episode_sample = buffer.sample(config['batch_size'])
+
+        # Truncate batch to only filled timesteps
+        max_ep_t = episode_sample.max_t_filled()
+        episode_sample = episode_sample[:, :max_ep_t]
+
+        #learn
+
 
     while True:
         
