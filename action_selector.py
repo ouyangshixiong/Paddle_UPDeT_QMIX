@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class Actor(object):
-    def __init__(self, config):
-        self.config = config
+import numpy as np
 
-    def sample(self):
+
+class ActionSelector:
+    def __init__(self):
         pass
 
-    
+    def select_actions(self):
+        return np.arange(0,6)
+
+    def init_hidden(self, batch_size):
+        pass

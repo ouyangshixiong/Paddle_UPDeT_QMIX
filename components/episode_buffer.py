@@ -102,7 +102,7 @@ class EpisodeBatch:
                 raise KeyError("{} not found in transition or episode data".format(k))
 
             dtype = self.scheme[k].get("dtype", np.float32)
-            v = paddle.tensor(v, dtype=dtype, device=self.device)
+            v = paddle.to_tensor(v, dtype=dtype, device=self.device)
             self._check_safe_view(v, target[k][_slices])
             target[k][_slices] = v.view_as(target[k][_slices])
 
@@ -178,7 +178,7 @@ class EpisodeBatch:
         # Only batch slice given, add full time slice
         if (isinstance(items, slice)  # slice a:b
             or isinstance(items, int)  # int i
-            or (isinstance(items, (list, np.ndarray, paddle.LongTensor, paddle.cuda.LongTensor)))  # [a,b,c]
+            or (isinstance(items, (list, np.ndarray, paddle.Tensor)))  # [a,b,c]
             ):
             items = (items, slice(None))
 

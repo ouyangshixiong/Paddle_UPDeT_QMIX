@@ -19,7 +19,7 @@ Config = {
     'sample_batch_episode': 2,
     'log_metrics_interval_s': 1,
     'calc_num': 2,
-    'scenario': '1c3s5z',
+    'scenario': '5m_vs_6m',
     'replay_buffer_size': 5000,
     'mixing_embed_dim': 32,
     'rnn_hidden_dim': 64,
@@ -38,6 +38,6 @@ Config = {
     'hypernet_embed_dim': 64,
     'double_q': True,
     'difficulty': 7,
-    'buffer_size': 32, # Size of the replay buffer
+    'buffer_size': 5000, # Size of the replay buffer
     'buffer_cpu_only': True
 }

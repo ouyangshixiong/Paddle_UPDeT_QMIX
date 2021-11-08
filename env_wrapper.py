@@ -25,7 +25,10 @@ class SC2EnvWrapper(object):
         self.n_actions = env_info['n_actions']
         self.n_agents = env_info['n_agents']
         self.state_shape = env_info['state_shape']
-        self.obs_shape = env_info['obs_shape'] + self.n_agents + self.n_actions
+        # paddlepaddle engineer modify this definition
+        #self.obs_shape = env_info['obs_shape'] + self.n_agents + self.n_actions
+        # UPDeT definition, different from paddlepaddle
+        self.obs_shape = env_info['obs_shape']
         self.agent_id_one_hot_transform = OneHotTransform(self.n_agents)
         self.actions_one_hot_transform = OneHotTransform(self.n_actions)
         self._init_agents_id_one_hot(self.n_agents)

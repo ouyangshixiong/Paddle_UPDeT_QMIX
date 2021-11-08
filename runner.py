@@ -31,18 +31,19 @@ from functools import partial
 from components.episode_buffer import EpisodeBatch
 
 class Runner(object):
-    def __init__(self, config, scheme, groups, preprocess):
+    def __init__(self, config, scheme, groups, preprocess, action_selector):
         self.config = config
         #=== Create Agent ===
         self.__create_agent()
 
-        #=== init Runner params ===
-        self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
-                                 preprocess=preprocess, device=self.args.device)
-
         #=== Remote Actor ===
         parl.connect(self.config['master_address'])
         self.__create_actors()
+
+        #=== init Runner params ===
+        self.action_selector = action_selector
+        self.new_batch = partial(EpisodeBatch, scheme, groups, self.config['batch_size'], self.config['episode_limit'] + 1,
+                                 preprocess=preprocess)
 
     def __create_agent(self):
         # init config from env
@@ -77,13 +78,19 @@ class Runner(object):
         self.reset()
 
         # should be True + break
-        while False:
-            pass
+        while True:
+            self.action_selector.init_hidden(self.config['batch_size'])
             # select action
-
+            actions = self.action_selector.select_actions()
+            actions_chosen = {
+                "actions": np.expand_dims(actions, 1)
+            }
+            self.batch.update(actions_chosen)
             # send action to actor
 
             # receive data back
+
+            break
 
         return self.batch
 

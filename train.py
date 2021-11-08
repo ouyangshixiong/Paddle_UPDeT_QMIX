@@ -18,12 +18,12 @@ from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
 from config import Config
 
-from learner import Learner
 from copy import deepcopy
 from parl.utils import summary
 import numpy as np
 
 from runner import Runner
+from action_selector import ActionSelector
 
 def run_sequential(config):
     # init config from env
@@ -48,11 +48,15 @@ def run_sequential(config):
     buffer = ReplayBuffer(scheme, groups, config['buffer_size'], env_info.episode_limit + 1,
                           preprocess=preprocess,
                           device="cpu" if config['buffer_cpu_only'] else config['device'])
+    
+    action_selector = ActionSelector()
 
-    # UPDet mac --> PARL actor ???这里不能耦合到actor
-
-    # runner select action --> send to remote --> data back
-    runner = Runner(config, scheme=scheme, groups=groups, preprocess=preprocess)
+    # new create file runner.py
+    # blue part of diagram
+    # X
+    # UPDet mac --> PARL actors
+    # runner.py 1. init: create actors 2. run method: select action --> send to remote --> data back
+    runner = Runner(config, scheme=scheme, groups=groups, preprocess=preprocess, action_selector=action_selector)
     episode_batch = runner.run()
     buffer.insert_episode_batch(episode_batch)
 
