@@ -92,7 +92,7 @@ class EpisodeBatch:
             if k in self.data.transition_data:
                 target = self.data.transition_data
                 if mark_filled:
-                    target["filled"][slices] = 1
+                    target["filled"][tuple(slices)] = 1
                     mark_filled = False
                 _slices = slices
             elif k in self.data.episode_data:
@@ -102,16 +102,18 @@ class EpisodeBatch:
                 raise KeyError("{} not found in transition or episode data".format(k))
 
             dtype = self.scheme[k].get("dtype", np.float32)
-            v = paddle.to_tensor(v, dtype=dtype, device=self.device)
-            self._check_safe_view(v, target[k][_slices])
-            target[k][_slices] = v.view_as(target[k][_slices])
+            v = paddle.to_tensor(v, dtype=dtype)
+            self._check_safe_view(v, target[k][tuple(_slices)])
+            #target[k][_slices] = v.view_as(target[k][_slices])
+            target[k][tuple(_slices)] = paddle.reshape(v,target[k][tuple(_slices)].shape)
 
             if k in self.preprocess:
                 new_k = self.preprocess[k][0]
                 v = target[k][_slices]
                 for transform in self.preprocess[k][1]:
                     v = transform.transform(v)
-                target[new_k][_slices] = v.view_as(target[new_k][_slices])
+                #target[new_k][_slices] = v.view_as(target[new_k][_slices])
+                target[new_k][_slices] = paddle.reshape(v,target[new_k][_slices].shape)
 
     def _check_safe_view(self, v, dest):
         idx = len(v.shape) - 1

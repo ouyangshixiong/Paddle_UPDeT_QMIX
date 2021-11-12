@@ -14,8 +14,8 @@
 
 Config = {
     'master_address': 'localhost:8010',
-    'actor_num': 2,
-    'env_num': 2,
+    'actor_num': 1,
+    'env_num': 1,
     'sample_batch_episode': 2,
     'log_metrics_interval_s': 1,
     'calc_num': 2,
@@ -37,7 +37,7 @@ Config = {
     'hypernet_layers': 2,
     'hypernet_embed_dim': 64,
     'double_q': True,
-    'difficulty': 7,
+    'difficulty': '7',
     'buffer_size': 5000, # Size of the replay buffer
     'buffer_cpu_only': True
 }

@@ -33,7 +33,7 @@ def run_sequential(config):
     scheme = {
         "state": {"vshape": env_info.state_shape},
         "obs": {"vshape": env_info.obs_shape, "group": "agents"},
-        "actions": {"vshape": (1,), "group": "agents", "dtype": np.longlong},
+        "actions": {"vshape": (1,), "group": "agents", "dtype": "int64"},
         "avail_actions": {"vshape": (env_info.n_actions,), "group": "agents", "dtype": np.int32},
         "reward": {"vshape": (1,)},
         "terminated": {"vshape": (1,), "dtype": np.uint8},

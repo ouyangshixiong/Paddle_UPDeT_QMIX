@@ -25,7 +25,7 @@ class SC2EnvWrapper(object):
         self.n_actions = env_info['n_actions']
         self.n_agents = env_info['n_agents']
         self.state_shape = env_info['state_shape']
-        # paddlepaddle engineer modify this definition
+        # paddlepaddle original definition
         #self.obs_shape = env_info['obs_shape'] + self.n_agents + self.n_actions
         # UPDeT definition, different from paddlepaddle
         self.obs_shape = env_info['obs_shape']
@@ -83,3 +83,18 @@ class SC2EnvWrapper(object):
         next_obs = np.concatenate(
             [next_obs, last_actions_one_hot, self.agents_id_one_hot], axis=-1)
         return next_state, next_obs, reward, terminated
+
+    # UPDet need this function
+    # paddlepaddle do not need this function
+    def get_state(self):
+        return self.env.get_state()
+
+    # UPDet need this function
+    # paddlepaddle do not need this function
+    def get_avail_actions(self):
+        return self.env.get_avail_actions()
+
+    # UPDet need this function
+    # paddlepaddle do not need this function
+    def get_obs(self):
+        return self.env.get_obs()

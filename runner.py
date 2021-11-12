@@ -33,6 +33,16 @@ from components.episode_buffer import EpisodeBatch
 class Runner(object):
     def __init__(self, config, scheme, groups, preprocess, action_selector):
         self.config = config
+        #=== init config from env ===
+        env = StarCraft2Env(map_name=self.config['scenario'], difficulty=self.config['difficulty'])
+        self.env = SC2EnvWrapper(env)
+        self.config['episode_limit'] = self.env.episode_limit
+        self.config['obs_shape'] = self.env.obs_shape
+        self.config['state_shape'] = self.env.state_shape
+        self.config['n_agents'] = self.env.n_agents
+        self.config['n_actions'] = self.env.n_actions
+        self.t = 0
+
         #=== Create Agent ===
         self.__create_agent()
 
@@ -42,19 +52,10 @@ class Runner(object):
 
         #=== init Runner params ===
         self.action_selector = action_selector
-        self.new_batch = partial(EpisodeBatch, scheme, groups, self.config['batch_size'], self.config['episode_limit'] + 1,
+        self.new_batch = partial(EpisodeBatch, scheme, groups, self.config['env_num'], self.config['episode_limit'] + 1,
                                  preprocess=preprocess)
 
     def __create_agent(self):
-        # init config from env
-        env = StarCraft2Env(map_name=self.config['scenario'], difficulty=self.config['difficulty'])
-        env = SC2EnvWrapper(env)
-        self.config['episode_limit'] = env.episode_limit
-        self.config['obs_shape'] = env.obs_shape
-        self.config['state_shape'] = env.state_shape
-        self.config['n_agents'] = env.n_agents
-        self.config['n_actions'] = env.n_actions
-        
         # 从RNN改成Transformer
         agent_model = TransformerModel(self.config['obs_shape'], self.config['n_actions'],
                             self.config['rnn_hidden_dim'])
@@ -76,10 +77,19 @@ class Runner(object):
 
     def run(self):
         self.reset()
+        terminated = False
+        episode_return = 0
+        self.action_selector.init_hidden(self.config['batch_size'])
 
-        # should be True + break
-        while True:
-            self.action_selector.init_hidden(self.config['batch_size'])
+        while not terminated:
+            pre_transition_data = {
+                "state": [self.env.get_state()],
+                "avail_actions": [self.env.get_avail_actions()],
+                "obs": [self.env.get_obs()]
+            }
+
+            self.batch.update(pre_transition_data, ts=self.t)
+            
             # select action
             actions = self.action_selector.select_actions()
             actions_chosen = {
@@ -90,6 +100,8 @@ class Runner(object):
 
             # receive data back
 
+            self.t += 1
+
             break
 
         return self.batch
@@ -98,4 +110,6 @@ class Runner(object):
         self.batch = self.new_batch()
 
         # reset envs
+        self.env.reset()
+        self.t = 0
 
