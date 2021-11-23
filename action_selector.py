@@ -19,8 +19,10 @@ class ActionSelector:
     def __init__(self):
         pass
 
-    def select_actions(self):
-        return np.arange(0,6)
+    def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None)):
+        avail_actions = ep_batch["avail_actions"][:, t_ep]
+        # TODO
+        return np.arange(0,5)
 
     def init_hidden(self, batch_size):
         pass

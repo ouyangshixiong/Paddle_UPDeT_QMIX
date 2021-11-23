@@ -28,6 +28,8 @@ class OneHot(Transform):
         self.out_dim = out_dim
 
     def transform(self, tensor):
+        # TODO 
+        # use paddle tensor
         y_onehot = tensor.new(*tensor.shape[:-1], self.out_dim).zero_()
         y_onehot.scatter_(-1, tensor.long(), 1)
         return y_onehot.float()

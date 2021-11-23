@@ -42,6 +42,7 @@ class Runner(object):
         self.config['n_agents'] = self.env.n_agents
         self.config['n_actions'] = self.env.n_actions
         self.t = 0
+        self.t_env = 0
 
         #=== Create Agent ===
         self.__create_agent()
@@ -77,25 +78,25 @@ class Runner(object):
 
     def run(self):
         self.reset()
-        terminated = False
-        episode_return = 0
-        self.action_selector.init_hidden(self.config['batch_size'])
 
-        while not terminated:
-            pre_transition_data = {
-                "state": [self.env.get_state()],
-                "avail_actions": [self.env.get_avail_actions()],
-                "obs": [self.env.get_obs()]
-            }
+        all_terminated = False
+        actors = self.config['actor_num']
+        episode_returns = [0 for _ in range(actors)]
+        episode_lengths = [0 for _ in range(actors)]
+        self.action_selector.init_hidden(actors)
+        terminated = [False for _ in range(actors)]
+        envs_not_terminated = [b_idx for b_idx, termed in enumerate(terminated) if not termed]
+        final_env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
-            self.batch.update(pre_transition_data, ts=self.t)
-            
+        while True:
             # select action
-            actions = self.action_selector.select_actions()
+            # need to run on GPU
+            # TODO
+            actions = self.action_selector.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated)
             actions_chosen = {
                 "actions": np.expand_dims(actions, 1)
             }
-            self.batch.update(actions_chosen)
+            self.batch.update(actions_chosen, bs=envs_not_terminated)
             # send action to actor
 
             # receive data back
