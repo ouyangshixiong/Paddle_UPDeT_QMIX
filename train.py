@@ -29,6 +29,8 @@ def run_sequential(config):
     # init config from env
     env_info = StarCraft2Env(map_name=config['scenario'], difficulty=config['difficulty'])
     env_info = SC2EnvWrapper(env_info)
+    # TODO replace this parameter
+    config['n_agents'] = env_info.n_agents
     # Default/Base scheme
     scheme = {
         "state": {"vshape": env_info.state_shape},
@@ -49,7 +51,7 @@ def run_sequential(config):
                           preprocess=preprocess,
                           device="cpu" if config['buffer_cpu_only'] else config['device'])
     
-    action_selector = ActionSelector()
+    action_selector = ActionSelector(scheme, config)
 
     # new create file runner.py
     # blue part of diagram

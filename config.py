@@ -39,5 +39,14 @@ Config = {
     'double_q': True,
     'difficulty': '7',
     'buffer_size': 5000, # Size of the replay buffer
-    'buffer_cpu_only': True
+    'buffer_cpu_only': True,
+    'obs_agent_id': False, # Include the agent's one_hot id in the observation
+    'obs_last_action': False, # Include the agent's last action (one_hot) in the observation
+    # --- Transformer parameters. Should be set manually. ---
+    'token_dim': 5, # Marines. For other unit type (e.g. Zeolot) this number can be different (6).
+    'emb': 32, # embedding dimension of transformer
+    'heads': 3, # head number of transformer
+    'depth': 2, # block number of transformer
+    'ally_num': 5, # number of ally (5m_vs_6m)
+    'enemy_num': 6, # number of enemy (5m_vs_6m)
 }
