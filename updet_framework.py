@@ -1,10 +1,13 @@
-import torch.nn as nn
-import torch.nn.functional as F
-import torch
+import paddle.nn as nn
+import paddle.nn.functional as F
+import paddle
+import numpy as np
 import argparse
 
+#from parl.core import paddle
 
-class UPDeT(nn.Module):
+
+class UPDeT(nn.Layer):
     def __init__(self, input_shape, config):
         super(UPDeT, self).__init__()
         self.config = config
@@ -14,7 +17,7 @@ class UPDeT(nn.Module):
     def init_hidden(self):
         # make hidden states on same device as model
         # return torch.zeros(1, self.args.emb).cuda()
-        return torch.zeros(1, self.config['emb'])
+        return np.zeros((1, self.config['emb']))
 
     def forward(self, inputs, hidden_state, task_enemy_num, task_ally_num):
         outputs, _ = self.transformer.forward(inputs, hidden_state, None)
@@ -29,18 +32,18 @@ class UPDeT(nn.Module):
         # each enemy has an output Q
         for i in range(task_enemy_num):
             q_enemy = self.q_basic(outputs[:, 1 + i, :])
-            q_enemy_mean = torch.mean(q_enemy, 1, True)
+            q_enemy_mean = np.mean(q_enemy, 1, True)
             q_enemies_list.append(q_enemy_mean)
 
         # concat enemy Q over all enemies
-        q_enemies = torch.stack(q_enemies_list, dim=1).squeeze()
+        q_enemies = np.stack(q_enemies_list, dim=1).squeeze()
 
         # concat basic action Q with enemy attack Q
-        q = torch.cat((q_basic_actions, q_enemies), 1)
+        q = np.cat((q_basic_actions, q_enemies), 1)
 
         return q, h
 
-class SelfAttention(nn.Module):
+class SelfAttention(nn.Layer):
     def __init__(self, emb, heads=8, mask=False):
 
         super().__init__()
@@ -49,26 +52,27 @@ class SelfAttention(nn.Module):
         self.heads = heads
         self.mask = mask
 
-        self.tokeys = nn.Linear(emb, emb * heads, bias=False)
-        self.toqueries = nn.Linear(emb, emb * heads, bias=False)
-        self.tovalues = nn.Linear(emb, emb * heads, bias=False)
+        self.tokeys = nn.Linear(emb, emb * heads, bias_attr=False)
+        self.toqueries = nn.Linear(emb, emb * heads, bias_attr=False)
+        self.tovalues = nn.Linear(emb, emb * heads, bias_attr=False)
 
         self.unifyheads = nn.Linear(heads * emb, emb)
 
     def forward(self, x, mask):
 
-        b, t, e = x.size()
+        b, t, e = x.shape
         h = self.heads
-        keys = self.tokeys(x).view(b, t, h, e)
-        queries = self.toqueries(x).view(b, t, h, e)
-        values = self.tovalues(x).view(b, t, h, e)
+        x = paddle.to_tensor(x)
+        keys = self.tokeys(x).reshape(b, t, h, e)
+        queries = self.toqueries(x).reshape(b, t, h, e)
+        values = self.tovalues(x).reshape(b, t, h, e)
 
         # compute scaled dot-product self-attention
 
         # - fold heads into the batch dimension
-        keys = keys.transpose(1, 2).contiguous().view(b * h, t, e)
-        queries = queries.transpose(1, 2).contiguous().view(b * h, t, e)
-        values = values.transpose(1, 2).contiguous().view(b * h, t, e)
+        keys = keys.transpose(1, 2).contiguous().reshape(b * h, t, e)
+        queries = queries.transpose(1, 2).contiguous().reshape(b * h, t, e)
+        values = values.transpose(1, 2).contiguous().reshape(b * h, t, e)
 
         queries = queries / (e ** (1 / 4))
         keys = keys / (e ** (1 / 4))
@@ -76,7 +80,7 @@ class SelfAttention(nn.Module):
         #   This should be more memory efficient
 
         # - get dot product of queries and keys, and scale
-        dot = torch.bmm(queries, keys.transpose(1, 2))
+        dot = np.bmm(queries, keys.transpose(1, 2))
 
         assert dot.size() == (b * h, t, t)
 
@@ -90,14 +94,14 @@ class SelfAttention(nn.Module):
         # - dot now has row-wise self-attention probabilities
 
         # apply the self attention to the values
-        out = torch.bmm(dot, values).view(b, h, t, e)
+        out = np.bmm(dot, values).view(b, h, t, e)
 
         # swap h, t back, unify heads
         out = out.transpose(1, 2).contiguous().view(b, t, h * e)
 
         return self.unifyheads(out)
 
-class TransformerBlock(nn.Module):
+class TransformerBlock(nn.Layer):
 
     def __init__(self, emb, heads, mask, ff_hidden_mult=4, dropout=0.0):
         super().__init__()
@@ -134,7 +138,7 @@ class TransformerBlock(nn.Module):
         return x, mask
 
 
-class Transformer(nn.Module):
+class Transformer(nn.Layer):
 
     def __init__(self, input_dim, emb, heads, depth, output_dim):
         super().__init__()
@@ -153,11 +157,11 @@ class Transformer(nn.Module):
         self.toprobs = nn.Linear(emb, output_dim)
 
     def forward(self, x, h, mask):
-
+        x = paddle.to_tensor(x)
         tokens = self.token_embedding(x)
-        tokens = torch.cat((tokens, h), 1)
+        tokens = np.concatenate((tokens, h), 1)
 
-        b, t, e = tokens.size()
+        b, t, e = tokens.shape
 
         x, mask = self.tblocks((tokens, mask))
 
@@ -168,7 +172,7 @@ class Transformer(nn.Module):
 def mask_(matrices, maskval=0.0, mask_diagonal=True):
 
     b, h, w = matrices.size()
-    indices = torch.triu_indices(h, w, offset=0 if mask_diagonal else 1)
+    indices = np.triu_indices(h, w, offset=0 if mask_diagonal else 1)
     matrices[:, indices[0], indices[1]] = maskval
 
 
@@ -187,7 +191,7 @@ if __name__ == '__main__':
     # testing the agent
     agent = UPDeT(None, args).cuda()
     hidden_state = agent.init_hidden().cuda().expand(args.ally_num, 1, -1)
-    tensor = torch.rand(args.ally_num, args.ally_num+args.enemy_num, args.token_dim).cuda()
+    tensor = np.rand(args.ally_num, args.ally_num+args.enemy_num, args.token_dim).cuda()
     q_list = []
     for _ in range(args.episode):
         q, hidden_state = agent.forward(tensor, hidden_state, args.ally_num, args.enemy_num)

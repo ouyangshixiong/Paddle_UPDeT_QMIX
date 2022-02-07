@@ -33,7 +33,9 @@ class ActionSelector:
         return chosen_actions
 
     def init_hidden(self, batch_size):
-        self.hidden_states = self.updet.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, 1, -1)
+        temp = self.updet.init_hidden()
+        temp = np.expand_dims(temp, 0)
+        self.hidden_states = np.broadcast_to(temp, (batch_size, self.n_agents, 1, temp.shape[2]))
 
     def _get_input_shape(self, scheme):
         input_shape = scheme["obs"]["vshape"]
