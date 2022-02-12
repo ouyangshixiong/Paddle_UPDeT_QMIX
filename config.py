@@ -19,7 +19,7 @@ Config = {
     'sample_batch_episode': 2,
     'log_metrics_interval_s': 1,
     'calc_num': 2,
-    'scenario': '5m_vs_6m',
+    'scenario': '8m_vs_9m',
     'replay_buffer_size': 5000,
     'mixing_embed_dim': 32,
     'rnn_hidden_dim': 64,
@@ -47,6 +47,6 @@ Config = {
     'emb': 32, # embedding dimension of transformer
     'heads': 3, # head number of transformer
     'depth': 2, # block number of transformer
-    'ally_num': 5, # number of ally (5m_vs_6m)
-    'enemy_num': 6, # number of enemy (5m_vs_6m)
+    'ally_num': 8, # number of ally (5m_vs_6m)
+    'enemy_num': 9, # number of enemy (5m_vs_6m)
 }
